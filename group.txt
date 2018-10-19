@@ -1,0 +1,5 @@
+StudentId  Name       Email
+898091     Wei Hong   whong5@student.unimelb.edu.au
+897097     Xiaoyu Sun xsun4@student.unimelb.edu.au
+888378     Shaoxi Ma  shaoxim@student.unimelb.edu.au
+927081     Haohua Wu  haohuaw@student.unimelb.edu.au

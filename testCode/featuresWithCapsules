@@ -1,0 +1,94 @@
+    def getFeatures(self, gameState, action):
+        features = util.Counter()
+        successor = self.getSuccessor(gameState, action)
+        myState = successor.getAgentState(self.index)
+        foodList = self.getFood(successor).asList()    
+        features['successorScore'] = -len(foodList)#self.getScore(successor)
+
+        rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
+        if action == rev: features['reverse'] = 1
+
+        # Compute distance to the nearest food
+        myPos = myState.getPosition()
+        if len(foodList) > 0: # This should always be True,  but better safe than sorry
+            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+            features['distanceToFood'] = minDistance
+
+        # Compute distance to the closest observable enemies
+
+        op_indeics = self.getOpponents(gameState)
+        if op_indeics is None:
+            pass
+        else:
+            minOpDistance = 9999
+            for op in op_indeics:
+                if not successor.getAgentState(op).isPacman:
+                    opPos = successor.getAgentPosition(op)
+                    if opPos is not None:
+                        opDistance = self.getMazeDistance(myPos, opPos)
+                        if opDistance < minOpDistance:
+                            minOpDistance = opDistance
+            if minOpDistance != 9999:
+                features['distanceToOp'] = minOpDistance
+            
+
+        # for op in op_indeics:
+        #     if not successor.getAgentState(op).isPacman:
+        #         opPos = successor.getAgentPosition(op)
+        #         if opPos is not None:
+        #             if self.getMazeDistance(opPos, myPos) is 1:
+        #                 features['distanceToOp'] = -100
+        #             else:
+        #                 features['distanceToOp'] = self.getMazeDistance(myPos, opPos)
+
+        # BEST_ENTRY
+
+        if not gameState.getAgentState(self.index).isPacman:
+            bestEntry = (0,0)
+            d_ghostToEntry = 0.0
+            for ep in self.entryPoints:
+                d = self.getMazeDistance(self.ghostPos,ep)
+                if d > d_ghostToEntry:
+                    d_ghostToEntry = d
+                    bestEntry = ep
+            features['distanceToEntry'] = self.getMazeDistance(myPos,bestEntry)
+        # BEST_ENTRY END
+                
+        # Compute distance to the closest home point
+        if self.survivalMode is True:
+            minHomeDist = min([self.getMazeDistance(myPos,hp) for hp in self.homePoints])
+            features['distanceToHome'] = minHomeDist
+
+        # when a pacman arrived home safely
+        if self.survivalMode is True and myPos in self.homePoints:
+            features['arrivedHome'] = self.getScore(gameState)
+        
+        if myPos is self.initialPosition:
+            features['dead'] = 1
+
+        possibleActions = successor.getLegalActions(self.index)
+        if self.survivalMode is True and len(possibleActions) <= 1:
+            features['deadEnd'] = 1
+
+        if self.findCapMode is True:
+            features['distanceToCap'] = 0
+            capsules = self.getCapsules(gameState)
+            if len(capsules) != 0:
+                minDistance = min([self.getMazeDistance(myPos, capPos) \
+                                    for capPos in capsules])
+                features['distanceToCap'] = minDistance
+
+        return features
+
+    def getWeights(self, gameState, action):
+        if power mode is on, eat the food greedy until its nearly off (10 steps left)
+        if self.findCapMode is True:
+            return {'dead':-9999, 'distanceToCap': -5}
+        if self.powerMode is True:
+            return {'successorScore': 100, 'distanceToFood': -2}
+        if survival mode is off, encourage our offensive agent to eat more food
+        if self.survivalMode is False:
+            return {'dead':-9999,'successorScore': 150, 'distanceToFood': -5, 'reverse': -2,'distanceToEntry': -5}
+        # if survival mode is on, encourage our offensive agent to go back home
+        else: 
+            return {'dead': -9999, 'arrivedHome': 500, 'distanceToHome': -20, 'distanceToOp': 2, 'deadEnd': -100}
